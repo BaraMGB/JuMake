@@ -4,8 +4,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use jumake::{create_files::create_source_files, create_files::create_cmakelists, context::Context, initialize_git::initialize_git_repo};
 use std::fs::{self};
-use std::io::Write; 
-use git2::build::RepoBuilder;
+use git2::{Repository, Signature, Error};
 
 // CLI argument parsing using clap
 #[derive(Parser)]
@@ -75,19 +74,36 @@ fn create_project(context: &Context) {
 
     fs::create_dir_all(&context.project_path).expect("Failed to create project directory");
 
-    let _= create_cmakelists(context);
-    let _ = create_source_files(context);
-    
+    if let Err(e) = create_cmakelists(context) {
+        eprintln!("Failed to create CMakeLists.txt: {}", e);
+    }
+
+    if let Err(e) = create_source_files(context) {
+        eprintln!("Failed to create source files: {}", e);
+    }
     initialize_git_repo(context);
+    if let Err(e) = create_initial_commit(context) {
+        eprintln!("Failed to create initial commit: {}", e);
+    }
 }
 
-fn add_juce_to_cmakelists(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
-    let cmakelists_path = context.project_path.join("CMakeLists.txt");
-    let mut cmakelists_file = fs::OpenOptions::new()
-        .append(true)
-        .open(cmakelists_path)?;
-
-    writeln!(cmakelists_file, "\nadd_subdirectory(modules/JUCE)")?;
-
+fn create_initial_commit(context: &Context) -> Result<(), Error> {
+    let repo = Repository::open(&context.project_path)?;
+    let signature = Signature::now("JuMake", "jumake@example.com")?;
+    let tree_id = {
+        let mut index = repo.index()?;
+        index.write_tree()?
+    };
+    let tree = repo.find_tree(tree_id)?;
+    let commit_id = repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Initial commit by JuMake",
+        &tree,
+        &[],
+    )?;
+    println!("Initial commit created with id: {}", commit_id);
     Ok(())
 }
+

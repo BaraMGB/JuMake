@@ -1,5 +1,5 @@
 // scr/initialize_git.rs
-use git2::{Repository, Signature, RemoteCallbacks, IndexAddOption, Error, FetchOptions, build::CheckoutBuilder};
+use git2::{Repository, RemoteCallbacks, IndexAddOption, Error, FetchOptions, build::CheckoutBuilder};
 use crate::context::Context;
 use std::path::Path;
 use std::fs;
@@ -35,21 +35,6 @@ pub fn initialize_git_repo(context: &Context) {
             let mut index = repo.index().expect("Failed to get Git index");
             index.add_path(Path::new(".gitmodules")).expect("Failed to add .gitmodules to index");
             index.write().expect("Failed to write Git index");
-
-            // Create the initial commit (including submodule and CMakeLists.txt changes)
-            let signature = Signature::now("JuMake", "jumake@example.com").expect("Failed to create Git signature");
-            let tree_id = repo.index().unwrap().write_tree().unwrap();
-            let tree = repo.find_tree(tree_id).unwrap();
-            repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                "Initial commit by JuMake",
-                &tree,
-                &[],
-            ).expect("Failed to create initial commit");
-            println!("Initial commit created.");
-
         }
         Err(e) => eprintln!("Failed to initialize Git repository: {}", e),
     }
@@ -122,22 +107,3 @@ let mut index = repo.index()?;
 }
 
 // Create the initial commit
-fn create_initial_commit(repo: &Repository) -> Result<(), Error> {
-    let signature = Signature::now("JuMake", "jumake@example.com")?;
-    let tree_id = {
-        let mut index = repo.index()?;
-        index.write_tree()?
-    };
-    let tree = repo.find_tree(tree_id)?;
-    let commit_id = repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        "Initial commit by JuMake",
-        &tree,
-        &[],
-    )?;
-    println!("Initial commit created with id: {}", commit_id);
-    Ok(())
-}
-
