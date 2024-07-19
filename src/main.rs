@@ -1,7 +1,12 @@
+// scr/main.rs
+
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use jumake::{create_files::create_source_files, create_files::create_cmakelists, context::Context, initialize_git::initialize_git_repo};
 use std::fs::{self};
+use std::io::Write; 
+use git2::build::RepoBuilder;
+
 // CLI argument parsing using clap
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -72,6 +77,17 @@ fn create_project(context: &Context) {
 
     let _= create_cmakelists(context);
     let _ = create_source_files(context);
+    
     initialize_git_repo(context);
 }
 
+fn add_juce_to_cmakelists(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
+    let cmakelists_path = context.project_path.join("CMakeLists.txt");
+    let mut cmakelists_file = fs::OpenOptions::new()
+        .append(true)
+        .open(cmakelists_path)?;
+
+    writeln!(cmakelists_file, "\nadd_subdirectory(modules/JUCE)")?;
+
+    Ok(())
+}
