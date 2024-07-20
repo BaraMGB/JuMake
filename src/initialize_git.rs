@@ -19,6 +19,8 @@ pub fn initialize_git_repo(context: &Context) {
                 .expect("Failed to open .gitignore file");
 
             writeln!(gitignore_file, "modules/").expect("Failed to write to .gitignore");
+            writeln!(gitignore_file, "jumake_build/").expect("Failed to write to .gitignore");
+            writeln!(gitignore_file, "build/").expect("Failed to write to .gitignore");
             // Add all files to the repository (excluding the submodule)
             if let Err(e) = add_all_files_to_repo(&repo) {
                 eprintln!("Error adding files to Git index: {}", e);

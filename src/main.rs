@@ -2,6 +2,7 @@
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use jumake::{create_files::create_source_files, create_files::create_cmakelists, context::Context, initialize_git::initialize_git_repo};
 use std::fs::{self};
 use git2::{Repository, Signature, Error};
@@ -55,8 +56,30 @@ fn main() {
                 project_name,
                 project_path,
             };
-
             create_project(&context);
+        }
+        Commands::Build => {
+            // Get the current directory as the project path
+            let project_path = std::env::current_dir().expect("Failed to get current directory");
+            let context = Context {
+                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_path,
+            };
+
+            if let Err(e) = build_project(&context) {
+                eprintln!("Build failed: {}", e);
+            }
+        }
+        Commands::Run => {
+            let project_path = std::env::current_dir().expect("Fehler beim Abrufen des aktuellen Verzeichnisses");
+            let context = Context {
+                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_path,
+            };
+
+            if let Err(e) = run_project(&context) {
+                eprintln!("Ausführung fehlgeschlagen: {}", e);
+            }
         }
         // Add other command implementations here later
         _ => todo!(), 
@@ -87,6 +110,83 @@ fn create_project(context: &Context) {
     }
 }
 
+fn build_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Building project '{}'...", context.project_name);
+
+    // Create the build directory if it doesn't exist
+    let build_dir = context.project_path.join("jumake_build"); // New build directory name
+    fs::create_dir_all(&build_dir)?;
+
+    // Run CMake to generate the build files
+    let cmake_status = Command::new("cmake")
+        .arg("..")
+        .current_dir(&build_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()?;
+    if !cmake_status.success() {
+        return Err("CMake configure failed".into());
+    }
+
+    // Run CMake to build the project
+    let build_status = Command::new("cmake")
+        .arg("--build")
+        .arg(".")
+        .current_dir(&build_dir)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()?;
+
+    if !build_status.success() {
+        return Err("CMake build failed".into());
+    }
+
+    println!("Build successful!");
+    Ok(())
+}
+
+fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
+    // First, build the project
+    if let Err(e) = build_project(context) {
+        return Err(format!("Failed to build the project: {}", e).into());
+    }
+
+    println!("Running project '{}'...", context.project_name);
+
+    // Find the path to the executable (need to consider JUCE here)
+    let executable_path = find_executable(context)?;
+
+    // Run the executable
+    Command::new(executable_path)
+        .current_dir(context.project_path.join("jumake_build"))
+        .status()?;
+
+    println!("Execution completed.");
+    Ok(())
+}
+
+fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
+    // Determine the operating system
+    if cfg!(target_os = "linux") {
+        // Construct the path to the executable for Linux systems
+        let executable_path = context
+            .project_path
+            .join(format!(
+                "jumake_build/src/{}_artefacts/{}"
+                , context.project_name
+                , context.project_name
+            ));
+
+        // Check if the executable exists and return the path
+        if executable_path.exists() {
+            return Ok(executable_path.to_string_lossy().to_string());
+        } else {
+            return Err(format!("Executable not found at {:?}", executable_path).into());
+        }
+    }
+
+    Err("Unsupported operating system".into())
+}
 fn create_initial_commit(context: &Context) -> Result<(), Error> {
     let repo = Repository::open(&context.project_path)?;
     let signature = Signature::now("JuMake", "jumake@example.com")?;
