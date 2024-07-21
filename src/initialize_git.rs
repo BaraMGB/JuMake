@@ -1,10 +1,13 @@
 // scr/initialize_git.rs
-use git2::{Repository, RemoteCallbacks, IndexAddOption, Error, FetchOptions, build::CheckoutBuilder};
 use crate::context::Context;
-use std::path::Path;
+use git2::{
+    build::CheckoutBuilder, Error, FetchOptions, IndexAddOption, RemoteCallbacks, Repository,
+    Signature,
+};
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::Path;
 // Initialize the Git repository
 pub fn initialize_git_repo(context: &Context) {
     println!("Initializing Git repository...");
@@ -35,7 +38,9 @@ pub fn initialize_git_repo(context: &Context) {
 
             // Stage the .gitmodules file
             let mut index = repo.index().expect("Failed to get Git index");
-            index.add_path(Path::new(".gitmodules")).expect("Failed to add .gitmodules to index");
+            index
+                .add_path(Path::new(".gitmodules"))
+                .expect("Failed to add .gitmodules to index");
             index.write().expect("Failed to write Git index");
         }
         Err(e) => eprintln!("Failed to initialize Git repository: {}", e),
@@ -83,7 +88,11 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
         fetch_options.remote_callbacks(remote_callbacks);
         fetch_options.download_tags(git2::AutotagOption::All);
 
-        submodule_repo.find_remote("origin")?.fetch(&["+refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)?;
+        submodule_repo.find_remote("origin")?.fetch(
+            &["+refs/heads/*:refs/remotes/origin/*"],
+            Some(&mut fetch_options),
+            None,
+        )?;
         println!("\nFetched all branches");
 
         // Checkout the master branch explicitly
@@ -97,15 +106,34 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
     }
 
     Ok(())
-   }
-
+}
 
 // Add all files to the Git repository index
 fn add_all_files_to_repo(repo: &Repository) -> Result<(), Error> {
-let mut index = repo.index()?;
+    let mut index = repo.index()?;
     index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
     index.write()?;
     Ok(())
 }
 
 // Create the initial commit
+
+pub fn create_initial_commit(context: &Context) -> Result<(), Error> {
+    let repo = Repository::open(&context.project_path)?;
+    let signature = Signature::now("JuMake", "jumake@example.com")?;
+    let tree_id = {
+        let mut index = repo.index()?;
+        index.write_tree()?
+    };
+    let tree = repo.find_tree(tree_id)?;
+    let commit_id = repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        "Initial commit by JuMake",
+        &tree,
+        &[],
+    )?;
+    println!("Initial commit created with id: {}", commit_id);
+    Ok(())
+}
