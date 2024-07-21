@@ -1,0 +1,9 @@
+#include <juce_core/juce_core.h>
+
+int main (int argc, char* argv[])
+{
+    std::cout << "Hello World!" << std::endl;
+    juce::ignoreUnused (argc, argv);
+
+    return 0;
+}

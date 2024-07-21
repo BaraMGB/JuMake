@@ -1,3 +1,5 @@
+// src/build.rs
+
 use crate::context::Context;
 use std::fs;
 use std::process::{Command, Stdio};
@@ -50,40 +52,50 @@ Ok(())
 
 pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
 // First, build the project
-if let Err(e) = build_project(context) {
-    return Err(format!("Failed to build the project: {}", e).into());
-}
-
-println!("Running project '{}'...", context.project_name);
-
-// Find the path to the executable (need to consider JUCE here)
-let executable_path = find_executable(context)?;
-
-// Run the executable
-Command::new(executable_path)
-    .current_dir(context.project_path.join("jumake_build"))
-    .status()?;
-
-println!("Execution completed.");
-Ok(())
-}
-
-fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
-// Determine the operating system
-if cfg!(target_os = "linux") {
-    // Construct the path to the executable for Linux systems
-    let executable_path = context.project_path.join(format!(
-        "jumake_build/src/{}_artefacts/{}",
-        context.project_name, context.project_name
-    ));
-
-    // Check if the executable exists and return the path
-    if executable_path.exists() {
-        return Ok(executable_path.to_string_lossy().to_string());
-    } else {
-        return Err(format!("Executable not found at {:?}", executable_path).into());
+    if let Err(e) = build_project(context) {
+        return Err(format!("Failed to build the project: {}", e).into());
     }
-}
 
-Err("Unsupported operating system".into())
+    println!("Running project '{}'...", context.project_name);
+
+    // Find the path to the executable (need to consider JUCE here)
+    let executable_path = find_executable(context)?;
+
+    // Run the executable
+    Command::new(executable_path)
+        .current_dir(context.project_path.join("jumake_build"))
+        .status()?;
+
+    println!("Execution completed.");
+    Ok(())
+}
+fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
+    // Determine the operating system
+    println!("Template name: {}", context.template_name); // Print the template name
+    if cfg!(target_os = "linux") {
+        // Construct the path to the executable based on the template type
+        let executable_path = match context.template_name.as_str() {
+            "GuiApplication" => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/{}",
+                context.project_name, context.project_name
+            )),
+            "ConsoleApp" => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/{}",
+                context.project_name, context.project_name
+            )),
+            "AudioPlugin" => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/Standalone/{}",
+                context.project_name, context.project_name
+            )),
+            _ => return Err("Unsupported template type for finding executable".into()),
+        };
+
+        // Check if the executable exists and return the path
+        if executable_path.exists() {
+            return Ok(executable_path.to_string_lossy().to_string());
+        } else {
+            return Err(format!("Executable not found at {:?}", executable_path).into());
+        }
+    }  
+    Err("Unsupported operating system".into())
 }

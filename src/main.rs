@@ -2,6 +2,9 @@
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
+use dialoguer::{Select, theme::ColorfulTheme};
+use regex::Regex;
+use std::fs;
 mod build;
 mod context;
 use build::{build_project, run_project};
@@ -26,6 +29,9 @@ enum Commands {
         /// Optional path for the project
         #[arg(short, long)]
         path: Option<String>,
+         /// Template name (optional)
+        #[arg(short, long)]
+        template: Option<String>,
     },
     Add {
         /// Name of the class
@@ -45,50 +51,83 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::New { project_name, path } => {
+        Commands::New { project_name, path, template } => {
             let project_path = match path {
                 Some(p) => PathBuf::from(p).join(&project_name),
                 None => PathBuf::from(&project_name),
             };
+            // Determine template name
+            let template_name = match template {
+                Some(t) => t,
+                None => {
+                    // Display menu and get user selection
+                    let selections = ["GuiApplication", "AudioPlugin", "ConsoleApp" /* ... other templates */];
+                    let selection = Select::with_theme(&ColorfulTheme::default())
+                        .with_prompt("Select a template:")
+                        .default(0)
+                        .items(&selections[..])
+                        .interact()
+                        .expect("Failed to get template selection");
 
+                    selections[selection].to_string()
+                }
+            };
             let context = Context {
                 project_name,
                 project_path,
+                template_name,
             };
             create_project(&context);
         }
-        Commands::Build => {
+         Commands::Build | Commands::Run => {
             // Get the current directory as the project path
             let project_path = std::env::current_dir().expect("Failed to get current directory");
+
+            // Determine the template name from the project
+            let template_name = determine_template_name(&project_path);
+
             let context = Context {
-                project_name: project_path
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
+                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
                 project_path,
+                template_name,
             };
 
-            if let Err(e) = build_project(&context) {
-                eprintln!("Build failed: {}", e);
-            }
-        }
-        Commands::Run => {
-            let project_path = std::env::current_dir().expect("Failed to get current directory");
-            let context = Context {
-                project_name: project_path
-                    .file_name()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
-                project_path,
-            };
-
-            if let Err(e) = run_project(&context) {
-                eprintln!("Failed run: {}", e);
+            match cli.command {
+                Commands::Build => {
+                    if let Err(e) = build_project(&context) {
+                        eprintln!("Build failed: {}", e);
+                    }
+                }
+                Commands::Run => {
+                    if let Err(e) = run_project(&context) {
+                        eprintln!("Failed run: {}", e);
+                    }
+                }
+                _ => unreachable!(), // Build and Run are the only options here
             }
         }
         // Add other command implementations here later
         _ => todo!(),
     }
+}
+
+fn determine_template_name(project_path: &PathBuf) -> String {
+    let cmakelists_path = project_path.join("src").join("CMakeLists.txt");
+
+    if cmakelists_path.exists() {
+        // Read the CMakeLists.txt content
+        let content = fs::read_to_string(&cmakelists_path).unwrap_or_default();
+
+        // Define a regular expression to extract the JUMAKE_TEMPLATE value
+        let re = Regex::new(r#"set\(JUMAKE_TEMPLATE\s+"([^"]+)"\)"#).unwrap();
+
+        // Find the match
+        if let Some(captures) = re.captures(&content) {
+            // Extract the template name from the first capture group
+            return captures.get(1).unwrap().as_str().to_string();
+        }
+    }
+
+    // Default to GuiApplication if no template is found
+    "GuiApplication".to_string()
 }

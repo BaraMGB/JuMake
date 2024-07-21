@@ -1,3 +1,5 @@
+set(JUMAKE_TEMPLATE "GuiApplication")
+
 juce_add_gui_app(${PROJECT_NAME}
     PRODUCT_NAME ${PROJECT_NAME})
 
