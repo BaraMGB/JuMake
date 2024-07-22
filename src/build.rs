@@ -71,19 +71,19 @@ pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> 
 }
 fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
     // Determine the operating system
-    println!("Template name: {}", context.template_name); // Print the template name
+    println!("Template name: {:?}", context.template_name); // Print the template name
     if cfg!(target_os = "linux") {
         // Construct the path to the executable based on the template type
-        let executable_path = match context.template_name.as_str() {
-            "GuiApplication" => context.project_path.join(format!(
+        let executable_path = match context.template_name.as_deref() {
+            Some("GuiApplication") => context.project_path.join(format!(
                 "jumake_build/src/{}_artefacts/{}",
                 context.project_name, context.project_name
             )),
-            "ConsoleApp" => context.project_path.join(format!(
+            Some("ConsoleApp") => context.project_path.join(format!(
                 "jumake_build/src/{}_artefacts/{}",
                 context.project_name, context.project_name
             )),
-            "AudioPlugin" => context.project_path.join(format!(
+            Some("AudioPlugin") => context.project_path.join(format!(
                 "jumake_build/src/{}_artefacts/Standalone/{}",
                 context.project_name, context.project_name
             )),

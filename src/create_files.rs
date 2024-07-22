@@ -9,8 +9,8 @@ pub fn create_source_files(context: &Context) -> Result<(), Box<dyn std::error::
     let src_path = context.project_path.join("src");
     fs::create_dir(&src_path)?;
 
-    match context.template_name.as_str() {
-        "GuiApplication" => {
+    match context.template_name.as_deref() {
+        Some("GuiApplication") => {
             // Create GUI application files
             create_file_from_template(&src_path, "Main.cpp", MAIN_CPP_TEMPLATE)?;
             create_file_from_template(
@@ -21,7 +21,7 @@ pub fn create_source_files(context: &Context) -> Result<(), Box<dyn std::error::
             create_file_from_template(&src_path, "MainComponent.h", MAIN_COMPONENT_H_TEMPLATE)?;
             create_file_from_template(&src_path, "CMakeLists.txt", GUI_APP_CMAKE_TEMPLATE)?;
         }
-        "AudioPlugin" => {
+        Some("AudioPlugin") => {
             // Create audio plugin files
             create_file_from_template(
                 &src_path,
@@ -37,13 +37,13 @@ pub fn create_source_files(context: &Context) -> Result<(), Box<dyn std::error::
             create_file_from_template(&src_path, "PluginEditor.h", PLUGIN_EDITOR_H_TEMPLATE)?;
             create_file_from_template(&src_path, "CMakeLists.txt", AUDIO_PLUGIN_CMAKE_TEMPLATE)?;
         }
-        "ConsoleApp" => {
+        Some("ConsoleApp") => {
             // Create console application files
             create_file_from_template(&src_path, "Main.cpp", CONSOLE_APP_MAIN_CPP_TEMPLATE)?;
             create_file_from_template(&src_path, "CMakeLists.txt", CONSOLE_APP_CMAKE_TEMPLATE)?;
         }
         _ => {
-            return Err(format!("Unknown template: {}", context.template_name).into());
+            return Err(format!("Unknown template: {:?}", context.template_name).into());
         }
     }
     Ok(())

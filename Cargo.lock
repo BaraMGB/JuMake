@@ -245,6 +245,7 @@ dependencies = [
  "dialoguer",
  "git2",
  "indoc",
+ "lazy_static",
  "regex",
 ]
 

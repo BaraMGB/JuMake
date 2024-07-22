@@ -58,25 +58,27 @@ fn main() {
             };
             // Determine template name
             let template_name = match template {
-                Some(t) => t,
-                None => {
-                    // Display menu and get user selection
-                    let selections = ["GuiApplication", "AudioPlugin", "ConsoleApp" /* ... other templates */];
-                    let selection = Select::with_theme(&ColorfulTheme::default())
-                        .with_prompt("Select a template:")
-                        .default(0)
-                        .items(&selections[..])
-                        .interact()
-                        .expect("Failed to get template selection");
+            Some(t) => Some(t), // Wrap the String in Some()
+            None => {
+                // Display menu and get user selection
+                let selections = ["GuiApplication", "AudioPlugin", "ConsoleApp"];
+                let selection = Select::with_theme(&ColorfulTheme::default())
+                    .with_prompt("Select a template:")
+                    .default(0)
+                    .items(&selections[..])
+                    .interact()
+                    .expect("Failed to get template selection");
 
-                    selections[selection].to_string()
+                Some(selections[selection].to_string()) // Wrap the result in Some()
                 }
             };
+
             let context = Context {
                 project_name,
                 project_path,
                 template_name,
             };
+
             create_project(&context);
         }
          Commands::Build | Commands::Run => {
@@ -84,7 +86,7 @@ fn main() {
             let project_path = std::env::current_dir().expect("Failed to get current directory");
 
             // Determine the template name from the project
-            let template_name = determine_template_name(&project_path);
+            let template_name  = determine_template_name(&project_path);
 
             let context = Context {
                 project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
@@ -111,7 +113,7 @@ fn main() {
     }
 }
 
-fn determine_template_name(project_path: &PathBuf) -> String {
+fn determine_template_name(project_path: &PathBuf) -> Option<String> {
     let cmakelists_path = project_path.join("src").join("CMakeLists.txt");
 
     if cmakelists_path.exists() {
@@ -124,10 +126,10 @@ fn determine_template_name(project_path: &PathBuf) -> String {
         // Find the match
         if let Some(captures) = re.captures(&content) {
             // Extract the template name from the first capture group
-            return captures.get(1).unwrap().as_str().to_string();
+            return Some(captures.get(1).unwrap().as_str().to_string());
         }
     }
 
     // Default to GuiApplication if no template is found
-    "GuiApplication".to_string()
+    Some("GuiApplication".to_string())
 }
