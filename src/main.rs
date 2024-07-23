@@ -16,7 +16,7 @@ mod initialize_git;
 use create_files::add_class;
 // CLI argument parsing using clap
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about = "A CLI tool for creating and managing JUCE projects.", long_about = None)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -24,23 +24,30 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+      /// Create a new JUCE project.
     New {
-        /// Name of the project
-        project_name: String,
-        /// Optional path for the project
-        #[arg(short, long)]
-        path: Option<String>,
-         /// Template name (optional)
-        #[arg(short, long)]
-        template: Option<String>,
+    /// The name of the project.
+    #[arg(name = "project_name")]
+    project_name: String,
+    /// The path to create the project at (optional).
+    #[arg(short, long, name = "path")]
+    path: Option<String>,
+    /// The template to use (optional).
+    #[arg(short, long, name = "template")]
+    template: Option<String>,
     },
+    /// Add a new c++ class or a JUCE component to the project.
     Add {
-         /// Type of element to add (Class or Component)
+        /// The type of element to add (simple c++ class or JUCE component).
+        #[arg(value_enum, name = "class type", help = "Specify the type of class to add, 'component' or 'class'.")]
         element_type: String,
-        /// Name of the class or component
+        /// The name of the class or component.
+        #[arg(name = "name", help = "Specify the name of the class to add. ")]
         element_name: String,
     },
+    /// Build and Run the project.
     Run,
+    /// Build the project.
     Build,
 }
 
