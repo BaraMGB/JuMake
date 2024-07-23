@@ -1,0 +1,18 @@
+#include "Template.h"
+
+Template::Template()
+{
+}
+
+Template::~Template()
+{
+}
+
+void Template::paint(juce::Graphics& /*g*/)
+{
+}
+
+void Template::resized()
+{
+}
+

@@ -13,6 +13,7 @@ mod create_project;
 use create_project::create_project;
 mod create_files;
 mod initialize_git;
+use create_files::add_class;
 // CLI argument parsing using clap
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -34,14 +35,10 @@ enum Commands {
         template: Option<String>,
     },
     Add {
-        /// Name of the class
-        class_name: String,
-        /// Create only a header file
-        #[arg(long)]
-        header_only: bool,
-        /// Optional output directory
-        #[arg(short, long)]
-        output: Option<String>,
+         /// Type of element to add (Class or Component)
+        element_type: String,
+        /// Name of the class or component
+        element_name: String,
     },
     Run,
     Build,
@@ -108,8 +105,19 @@ fn main() {
                 _ => unreachable!(), // Build and Run are the only options here
             }
         }
+        Commands::Add { element_type, element_name } => {
+            let project_path = std::env::current_dir().expect("Failed to get current directory");
+            let context = Context {
+                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_path,
+                template_name: None, // We don't need the template name for this command
+            };
+
+            if let Err(e) = add_class(&context, &element_type, &element_name) {
+                eprintln!("Failed to add {}: {}", element_type, e);
+            }
+        }
         // Add other command implementations here later
-        _ => todo!(),
     }
 }
 
