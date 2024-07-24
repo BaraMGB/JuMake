@@ -62,18 +62,25 @@ pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> 
     let executable_path = find_executable(context)?;
 
     // Run the executable
-    Command::new(executable_path)
-        .current_dir(context.project_path.join("jumake_build"))
-        .status()?;
+    if cfg!(target_os = "macos") {
+        Command::new("open")
+            .arg(executable_path)
+            .status()?;
+    } else {
+        Command::new(executable_path)
+            .current_dir(context.project_path.join("jumake_build"))
+            .status()?;
+    }
 
     println!("Execution completed.");
     Ok(())
 }
+
 fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
-    // Determine the operating system
-    println!("Template name: {:?}", context.template_name); // Print the template name
+    println!("Template name: {:?}", context.template_name);
+
     if cfg!(target_os = "linux") {
-        // Construct the path to the executable based on the template type
+        // Construct the path to the executable based on the template type on Linux
         let executable_path = match context.template_name.as_deref() {
             Some("GuiApplication") => context.project_path.join(format!(
                 "jumake_build/src/{}_artefacts/{}",
@@ -87,15 +94,38 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Erro
                 "jumake_build/src/{}_artefacts/Standalone/{}",
                 context.project_name, context.project_name
             )),
-            _ => return Err("Unsupported template type for finding executable".into()),
+            _ => return Err("Unsupported template type for finding executable on Linux".into()),
         };
 
-        // Check if the executable exists and return the path
         if executable_path.exists() {
             return Ok(executable_path.to_string_lossy().to_string());
         } else {
-            return Err(format!("Executable not found at {:?}", executable_path).into());
+            return Err(format!("Executable not found at {:?} on Linux", executable_path).into());
         }
-    }  
-    Err("Unsupported operating system".into())
+    } else if cfg!(target_os = "macos") {
+        // Construct the path to the .app bundle on macOS
+        let executable_path = match context.template_name.as_deref() {
+            Some("GuiApplication") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/{}.app",
+                context.project_name, context.project_name
+            )),
+            Some("ConsoleApp") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/{}",
+                context.project_name, context.project_name
+            )),
+            Some("AudioPlugin") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/Standalone/{}",
+                context.project_name, context.project_name
+            )),
+            _ => return Err("Unsupported template type for finding executable on macOS".into()),
+        };
+
+        if executable_path.exists() {
+            return Ok(executable_path.to_string_lossy().to_string());
+        } else {
+            return Err(format!("Executable not found at {:?} on macOS", executable_path).into());
+        }
+    } else {
+        return Err("Unsupported operating system".into());
+    }
 }
