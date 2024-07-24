@@ -36,14 +36,16 @@ if !build_status.success() {
     return Err("CMake build failed".into());
 }
 
-// Move compile_commands.json to the root of the project
-let compile_commands_path = build_dir.join("compile_commands.json");
-if compile_commands_path.exists() {
-    let destination_path = context.project_path.join("compile_commands.json");
-    fs::copy(&compile_commands_path, &destination_path)?;
-    println!("Moved compile_commands.json to the project root.");
-} else {
-    return Err("compile_commands.json not found".into());
+// Move compile_commands.json to the root of the project (only on non-Windows)
+if !cfg!(target_os = "windows") {
+    let compile_commands_path = build_dir.join("compile_commands.json");
+    if compile_commands_path.exists() {
+        let destination_path = context.project_path.join("compile_commands.json");
+        fs::copy(&compile_commands_path, &destination_path)?;
+        println!("Moved compile_commands.json to the project root.");
+    } else {
+        return Err("compile_commands.json not found".into());
+    }
 }
 
 println!("Build successful!");
@@ -124,6 +126,30 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Erro
             return Ok(executable_path.to_string_lossy().to_string());
         } else {
             return Err(format!("Executable not found at {:?} on macOS", executable_path).into());
+        }
+    }else if cfg!(target_os = "windows") {
+        // Construct the path to the executable on Windows
+        let executable_path = match context.template_name.as_deref() {
+            Some("GuiApplication") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/Debug/{}.exe",
+                context.project_name, context.project_name
+            )),
+            Some("ConsoleApp") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/Debug/{}.exe",
+                context.project_name, context.project_name
+            )),
+            Some("AudioPlugin") => context.project_path.join(format!(
+                "jumake_build/src/{}_artefacts/Debug/Standalone/{}.exe",
+                context.project_name, context.project_name
+            )),
+            // Add other template types as needed
+            _ => return Err("Unsupported template type for finding executable on Windows".into()),
+        };
+
+        if executable_path.exists() {
+            return Ok(executable_path.to_string_lossy().to_string());
+        } else {
+            return Err(format!("Executable not found at {:?} on Windows", executable_path).into());
         }
     } else {
         return Err("Unsupported operating system".into());
