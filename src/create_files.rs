@@ -71,6 +71,18 @@ pub fn add_class(context: &Context, element_type: &str, element_name: &str) -> R
     let header_file_name = format!("{}.h", adjusted_element_name);
     let cpp_file_name = format!("{}.cpp", adjusted_element_name);
 
+    // Check if the header or source file already exists
+    let header_path = src_path.join(&header_file_name);
+    let cpp_path = src_path.join(&cpp_file_name);
+
+    if header_path.exists() || cpp_path.exists() {
+        return Err(format!("{} '{}' already exists in the project.", element_type, adjusted_element_name).into());
+    }
+
+    // Construct file names for the header and source files.
+    let header_file_name = format!("{}.h", adjusted_element_name);
+    let cpp_file_name = format!("{}.cpp", adjusted_element_name);
+
     // Create files from templates with the adjusted names.
     create_classfile_from_template(&src_path, &header_file_name, header_template, &adjusted_element_name)?;
     create_classfile_from_template(&src_path, &cpp_file_name, cpp_template, &adjusted_element_name)?;
