@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 
 pub fn build_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
 println!("Building project '{}'...", context.project_name);
+println!("in '{}'...", context.build_type);
 
 // Create the build directory if it doesn't exist
 let build_dir = context.project_path.join("jumake_build"); // New build directory name
@@ -14,6 +15,7 @@ fs::create_dir_all(&build_dir)?;
 // Run CMake to generate the build files
 let cmake_status = Command::new("cmake")
     .arg("..")
+    .arg(format!("-DCMAKE_BUILD_TYPE={}", context.build_type))
     .arg("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON")
     .current_dir(&build_dir)
     .stdout(Stdio::inherit())
@@ -80,21 +82,22 @@ pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> 
 
 fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Error>> {
     println!("Template name: {:?}", context.template_name);
+    println!("Build type: {:?}", context.build_type);
 
     if cfg!(target_os = "linux") {
         // Construct the path to the executable based on the template type on Linux
         let executable_path = match context.template_name.as_deref() {
             Some("GuiApplication") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("ConsoleApp") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("AudioPlugin") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/Standalone/{}",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/Standalone/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             _ => return Err("Unsupported template type for finding executable on Linux".into()),
         };

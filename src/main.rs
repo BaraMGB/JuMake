@@ -45,10 +45,16 @@ enum Commands {
         #[arg(name = "name", help = "Specify the name of the class to add. ")]
         element_name: String,
     },
-    /// Build and Run the project.
-    Run,
     /// Build the project.
-    Build,
+    Build {
+        #[arg(short = 't', long = "build-type", default_value_t = String::from("Release"))]
+        build_type: String,
+    },
+    /// Build and Run the project.
+    Run {
+        #[arg(short = 't', long = "build-type", default_value = "LastUsed")]
+        build_type: String,
+    },
 }
 
 fn main() {
@@ -81,52 +87,78 @@ fn main() {
                 project_name,
                 project_path,
                 template_name,
+                build_type: String::from("Release"),
             };
 
             create_project(&context);
-        }
-         Commands::Build | Commands::Run => {
-            // Get the current directory as the project path
+        },
+        Commands::Build { build_type } => {
+            if let Err(error_message) = validate_build_type(&build_type) {
+                eprintln!("{}", error_message);
+                return;
+            }
             let project_path = std::env::current_dir().expect("Failed to get current directory");
+            let context = Context {
+                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_path: project_path.clone(),
+                template_name: determine_template_name(&project_path),
+                build_type: build_type.clone(),
+            };
 
-            // Determine the template name from the project
-            let template_name  = determine_template_name(&project_path);
+            if let Err(e) = build_project(&context) {
+                eprintln!("Build failed: {}", e);
+            } else {
+                if let Err(e) = save_build_type(&context) {
+                    eprintln!("Failed to save last build type {}", e);
+                }
+            }
+        },
+        Commands::Run { build_type } => {
+            let project_path = std::env::current_dir().expect("Failed to get current directory");
+            let effective_build_type = if build_type == "LastUsed" {
+                read_last_build_type(&project_path).unwrap_or_else(|| String::from("Release"))
+            } else {
+                build_type
+            };
+            if let Err(error_message) = validate_build_type(&effective_build_type) {
+                eprintln!("{}", error_message);
+                return;
+            }
 
             let context = Context {
                 project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
-                project_path,
-                template_name,
+                project_path: project_path.clone(),
+                template_name: determine_template_name(&project_path),
+                build_type: effective_build_type,
             };
-
-            match cli.command {
-                Commands::Build => {
-                    if let Err(e) = build_project(&context) {
-                        eprintln!("Build failed: {}", e);
-                    }
-                }
-                Commands::Run => {
-                    if let Err(e) = run_project(&context) {
-                        eprintln!("Failed run: {}", e);
-                    }
-                }
-                _ => unreachable!(), // Build and Run are the only options here
+            if let Err(e) = run_project(&context) {
+                eprintln!("Failed to run: {}", e);
             }
-        }
+        },
         Commands::Add { element_type, element_name } => {
             let project_path = std::env::current_dir().expect("Failed to get current directory");
             let context = Context {
                 project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
                 project_path,
                 template_name: None, // We don't need the template name for this command
+                build_type: String::from("Release"), // Default build type
             };
 
             if let Err(e) = add_class(&context, &element_type, &element_name) {
                 eprintln!("Failed to add {}: {}", element_type, e);
             }
-        }
+        },
         // Add other command implementations here later
     }
 }
+
+fn validate_build_type(build_type: &str) -> Result<(), String> {
+    match build_type {
+        "Debug" | "Release" | "RelWithDebInfo" | "MinSizeRel" => Ok(()),
+        _ => Err(format!("Invalid build type: {}. Use one of: Debug, Release, RelWithDebInfo, MinSizeRel", build_type)),
+    }
+}
+
 
 fn determine_template_name(project_path: &PathBuf) -> Option<String> {
     let cmakelists_path = project_path.join("src").join("CMakeLists.txt");
@@ -147,4 +179,11 @@ fn determine_template_name(project_path: &PathBuf) -> Option<String> {
 
     // Default to GuiApplication if no template is found
     Some("GuiApplication".to_string())
+}
+fn save_build_type(context: &Context) -> std::io::Result<()> {
+    fs::write(context.project_path.join(".jumake"), &context.build_type)
+}
+
+fn read_last_build_type(project_path: &PathBuf) -> Option<String> {
+    fs::read_to_string(project_path.join(".jumake")).ok()
 }
