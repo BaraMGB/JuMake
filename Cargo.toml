@@ -1,7 +1,14 @@
 [package]
 name = "jumake"
 version = "0.1.0"
+authors = ["Steffen Baranowsky BaraMGB@arcor.de"]
 edition = "2021"
+description = "JuMake is a command-line tool designed to simplify and accelerate the process of setting up new JUCE projects using CMake."
+license = "MIT"
+documentation = "https://github.com/BaraMGB/JuMake"
+homepage = "https://github.com/BaraMGB/JuMake"
+repository = "https://github.com/BaraMGB/JuMake"
+
 
 [dependencies]
 clap = { version = "4.5.9", features = ["derive"] }
