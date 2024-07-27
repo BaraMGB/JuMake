@@ -29,6 +29,8 @@ if !cmake_status.success() {
 let build_status = Command::new("cmake")
     .arg("--build")
     .arg(".")
+    .arg("--config")
+    .arg(format!("{}", context.build_type))
     .current_dir(&build_dir)
     .stdout(Stdio::inherit())
     .stderr(Stdio::inherit())
