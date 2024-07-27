@@ -78,7 +78,6 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
                     stats.total_objects(),
                     stats.received_bytes()
                 );
-                use std::io::Write;
                 std::io::stdout().flush().unwrap();
             }
             true
