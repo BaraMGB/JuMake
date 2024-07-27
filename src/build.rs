@@ -111,16 +111,16 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Erro
         // Construct the path to the .app bundle on macOS
         let executable_path = match context.template_name.as_deref() {
             Some("GuiApplication") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}.app",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("ConsoleApp") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("AudioPlugin") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/Standalone/{}",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/Standalone/{}",
+                context.project_name, context.build_type, context.project_name
             )),
             _ => return Err("Unsupported template type for finding executable on macOS".into()),
         };
@@ -134,16 +134,16 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Erro
         // Construct the path to the executable on Windows
         let executable_path = match context.template_name.as_deref() {
             Some("GuiApplication") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/Debug/{}.exe",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}.exe",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("ConsoleApp") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/Debug/{}.exe",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/{}.exe",
+                context.project_name, context.build_type, context.project_name
             )),
             Some("AudioPlugin") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/Debug/Standalone/{}.exe",
-                context.project_name, context.project_name
+                "jumake_build/src/{}_artefacts/{}/Standalone/{}.exe",
+                context.project_name, context.build_type, context.project_name
             )),
             // Add other template types as needed
             _ => return Err("Unsupported template type for finding executable on Windows".into()),
