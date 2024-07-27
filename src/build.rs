@@ -113,15 +113,15 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn std::error::Erro
         // Construct the path to the .app bundle on macOS
         let executable_path = match context.template_name.as_deref() {
             Some("GuiApplication") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}/{}",
+                "jumake_build/src/{}_artefacts/{}/{}.app",
                 context.project_name, context.build_type, context.project_name
             )),
             Some("ConsoleApp") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}/{}",
+                "jumake_build/src/{}_artefacts/{}/{}.app",
                 context.project_name, context.build_type, context.project_name
             )),
             Some("AudioPlugin") => context.project_path.join(format!(
-                "jumake_build/src/{}_artefacts/{}/Standalone/{}",
+                "jumake_build/src/{}_artefacts/{}/Standalone/{}.app",
                 context.project_name, context.build_type, context.project_name
             )),
             _ => return Err("Unsupported template type for finding executable on macOS".into()),
