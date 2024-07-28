@@ -125,14 +125,12 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
     let paths: Vec<&str> = output_str.lines().collect();
 
     println!("build directory: {}", build_dir.display());
-    println!("Found executable paths:");
-    for path in &paths {
-        println!("{}", path);
-    }
 
     let executable_path = paths.into_iter()
         .find(|path| path.contains(&context.build_type))
         .ok_or_else(|| format!("Executable not found for build type: {}", context.build_type))?;
+
+    println!("starting executable at: {}", executable_path);
 
     Ok(executable_path.to_string())
 }
