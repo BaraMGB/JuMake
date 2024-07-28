@@ -98,6 +98,7 @@ fn test_create_cmakelists() {
             project_name: String::from("test_project"),
             project_path: PathBuf::from("/tmp/cmake_test_project"),
             template_name: Some(String::from(data.template_name)),
+            build_type: String::from("Release"),
         };
         let _ = fs::remove_dir_all(&context.project_path); // Clean up before running the test
         fs::create_dir_all(&context.project_path)
@@ -126,6 +127,7 @@ fn test_create_source_files() {
             project_name: String::from("test_project"),
             project_path: PathBuf::from("/tmp/sourcefile_test_project"),
             template_name: Some(String::from(data.template_name)),
+            build_type: String::from("Release"),
         };
         let _ = fs::remove_dir_all(&context.project_path); // Clean up before running the test
         fs::create_dir_all(&context.project_path)
