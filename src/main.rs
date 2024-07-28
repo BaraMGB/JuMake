@@ -14,6 +14,10 @@ use create_project::create_project;
 mod create_files;
 mod initialize_git;
 use create_files::add_class;
+use std::fs::File;
+use std::path::Path;
+use std::error::Error;
+use std::io::{BufRead, BufReader};
 // CLI argument parsing using clap
 #[derive(Parser)]
 #[command(author, version, about = "A CLI tool for creating and managing JUCE projects.", long_about = None)]
@@ -124,9 +128,15 @@ fn main() {
                 eprintln!("{}", error_message);
                 return;
             }
-
+            let project_name = match extract_project_name(project_path.join("CMakeLists.txt")) {
+                Ok(name) => name,
+                Err(e) => {
+                    eprintln!("Failed to extract project name: {}", e);
+                    return;
+                }
+            };
             let context = Context {
-                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_name: project_name.clone(),
                 project_path: project_path.clone(),
                 template_name: determine_template_name(&project_path),
                 build_type: effective_build_type,
@@ -186,4 +196,25 @@ fn save_build_type(context: &Context) -> std::io::Result<()> {
 
 fn read_last_build_type(project_path: &PathBuf) -> Option<String> {
     fs::read_to_string(project_path.join(".jumake")).ok()
+}
+fn extract_project_name<P: AsRef<Path>>(cmake_file_path: P) -> Result<String, Box<dyn Error>> {
+    // Open the file
+    let file = File::open(cmake_file_path)?;
+    let reader = BufReader::new(file);
+
+    // Read the file line by line
+    for line in reader.lines() {
+        let line = line?;
+        // Look for the line that starts with "project("
+        if line.trim_start().starts_with("project(") {
+            // Extract the project name between the parentheses
+            if let Some(start) = line.find('(') {
+                if let Some(end) = line.find(')') {
+                    return Ok(line[start + 1..end].trim().to_string());
+                }
+            }
+        }
+    }
+
+    Err("Project name not found".into())
 }
