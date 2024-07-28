@@ -197,6 +197,7 @@ fn save_build_type(context: &Context) -> std::io::Result<()> {
 fn read_last_build_type(project_path: &PathBuf) -> Option<String> {
     fs::read_to_string(project_path.join(".jumake")).ok()
 }
+
 fn extract_project_name<P: AsRef<Path>>(cmake_file_path: P) -> Result<String, Box<dyn Error>> {
     // Open the file
     let file = File::open(cmake_file_path)?;
@@ -207,10 +208,15 @@ fn extract_project_name<P: AsRef<Path>>(cmake_file_path: P) -> Result<String, Bo
         let line = line?;
         // Look for the line that starts with "project("
         if line.trim_start().starts_with("project(") {
-            // Extract the project name between the parentheses
+            // Extract the content between the parentheses
             if let Some(start) = line.find('(') {
                 if let Some(end) = line.find(')') {
-                    return Ok(line[start + 1..end].trim().to_string());
+                    // Get the content between the parentheses and split by whitespace
+                    let content = &line[start + 1..end];
+                    let parts: Vec<&str> = content.split_whitespace().collect();
+                    if let Some(project_name) = parts.first() {
+                        return Ok(project_name.to_string());
+                    }
                 }
             }
         }
