@@ -92,24 +92,31 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
 
     let build_dir = context.project_path.join("jumake_build");
 
-    let find_command = if cfg!(target_os = "windows") {
-        format!("cmd /C \"cd {} && dir /S /B {}.exe\"", 
-            build_dir.to_string_lossy(),
+    let output = if cfg!(target_os = "windows") {
+        // Properly format the PowerShell command for Windows
+        let find_command = format!(
+            "Get-ChildItem -Recurse -Filter '{}.exe' -File | Select-Object -ExpandProperty FullName",
             context.project_name
-        )
+        );
+        Command::new("powershell")
+            .arg("-Command")
+            .arg(&find_command)
+            .current_dir(&build_dir)
+            .output()
+            .expect("Failed to execute PowerShell command")
     } else {
-        format!("find {} -name {} -type f -executable", 
+        // Use the existing find command for Unix-like systems
+        let find_command = format!(
+            "find {} -name {} -type f -executable",
             build_dir.to_string_lossy(),
             context.project_name
-        )
+        );
+        Command::new("sh")
+            .arg("-c")
+            .arg(&find_command)
+            .output()
+            .expect("Failed to execute find command")
     };
-
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg(find_command)
-        .output()
-        .expect("Failed to execute find command");
-
     if !output.status.success() {
         return Err(format!("Find command failed with output: {:?}", output).into());
     }
