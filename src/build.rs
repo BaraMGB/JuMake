@@ -105,12 +105,19 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
             .output()
             .expect("Failed to execute PowerShell command")
     } else {
-        // Use the existing find command for Unix-like systems
-        let find_command = format!(
-            "find {} -name {} -type f -executable",
-            build_dir.to_string_lossy(),
-            context.project_name
-        );
+        let find_command = if cfg!(target_os = "macos") {
+            format!(
+                "find {} -name {} -type f -perm +111",
+                build_dir.to_string_lossy(),
+                context.project_name
+            )
+        } else {
+            format!(
+                "find {} -name {} -type f -executable",
+                build_dir.to_string_lossy(),
+                context.project_name
+            )
+        };
         Command::new("sh")
             .arg("-c")
             .arg(&find_command)
