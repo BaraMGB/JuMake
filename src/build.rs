@@ -84,7 +84,6 @@ pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> 
     Ok(())
 }
 
-
 fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
     println!("Template name: {:?}", context.template_name);
     println!("Build type: {:?}", context.build_type);
@@ -93,7 +92,6 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
     let build_dir = context.project_path.join("jumake_build");
 
     let output = if cfg!(target_os = "windows") {
-        // Properly format the PowerShell command for Windows
         let find_command = format!(
             "Get-ChildItem -Recurse -Filter '{}.exe' -File | Select-Object -ExpandProperty FullName",
             context.project_name
@@ -106,11 +104,19 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
             .expect("Failed to execute PowerShell command")
     } else {
         let find_command = if cfg!(target_os = "macos") {
-            format!(
-                "find {} -name {} -type f -perm +111",
-                build_dir.to_string_lossy(),
-                context.project_name
-            )
+            if context.template_name.as_deref() == Some("AudioPlugin") {
+                format!(
+                    "find {} -name {} -type f -perm +111 | grep Standalone",
+                    build_dir.to_string_lossy(),
+                    context.project_name
+                )
+            } else {
+                format!(
+                    "find {} -name {} -type f -perm +111",
+                    build_dir.to_string_lossy(),
+                    context.project_name
+                )
+            }
         } else {
             format!(
                 "find {} -name {} -type f -executable",
@@ -124,6 +130,7 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
             .output()
             .expect("Failed to execute find command")
     };
+
     if !output.status.success() {
         return Err(format!("Find command failed with output: {:?}", output).into());
     }
@@ -131,13 +138,23 @@ fn find_executable(context: &Context) -> Result<String, Box<dyn Error>> {
     let output_str = str::from_utf8(&output.stdout)?;
     let paths: Vec<&str> = output_str.lines().collect();
 
-    println!("build directory: {}", build_dir.display());
-
     let executable_path = paths.into_iter()
         .find(|path| path.contains(&context.build_type))
         .ok_or_else(|| format!("Executable not found for build type: {}", context.build_type))?;
 
-    println!("starting executable at: {}", executable_path);
+    let executable_path = if cfg!(target_os = "macos") {
+        // cut off after ".app"
+        if let Some(app_index) = executable_path.find(".app") {
+            let end_index = app_index + 4;
+            &executable_path[..end_index]
+        } else {
+            executable_path
+        }
+    } else {
+        executable_path
+    };
+
+    println!("start executable: {}", executable_path);
 
     Ok(executable_path.to_string())
 }
