@@ -70,7 +70,7 @@ pub fn run_project(context: &Context) -> Result<(), Box<dyn std::error::Error>> 
     let executable_path = find_executable(context)?;
 
     // Run the executable
-    if cfg!(target_os = "macos") {
+    if cfg!(target_os = "macos") && context.template_name.as_deref() != Some("ConsoleApp") {
         Command::new("open")
             .arg(executable_path)
             .status()?;
