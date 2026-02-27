@@ -52,16 +52,14 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      # === LINUX PACKAGES ===
+      # === LINUX: tar.gz + deb ===
       - name: Install cargo-deb
         if: runner.os == 'Linux'
         run: cargo install cargo-deb
 
-      - name: Build .deb package (Linux)
+      - name: Build .deb (Linux)
         if: runner.os == 'Linux'
-        run: |
-          cargo deb --no-strip --output ${{ matrix.artifact }}.deb
-        continue-on-error: true
+        run: cargo deb --no-strip --output ${{ matrix.artifact }}.deb
 
       - name: Build tar.gz (Linux)
         if: runner.os == 'Linux'
@@ -70,20 +68,102 @@ jobs:
           strip ${{ matrix.binary }} 2>/dev/null || true
           tar -czvf ../../../${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
 
-      # === WINDOWS PACKAGES ===
+      # === WINDOWS: zip + installer ===
       - name: Build zip (Windows)
         if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
           7z a ../../../${{ matrix.artifact }}.zip ${{ matrix.binary }}
 
-      # === MACOS PACKAGES ===
+      - name: Build Windows Installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Create NSIS script
+          $nsisScript = @"
+          !include "MUI2.nsh"
+          
+          Name "JuMake"
+          OutFile "jumake-windows-x64-installer.exe"
+          InstallDir "$PROGRAMFILES64\JuMake"
+          RequestExecutionLevel admin
+          
+          !insertmacro MUI_PAGE_DIRECTORY
+          !insertmacro MUI_PAGE_INSTFILES
+          !insertmacro MUI_LANGUAGE "English"
+          
+          Section "Install"
+            SetOutPath $INSTDIR
+            File "target\x86_64-pc-windows-msvc\release\jumake.exe"
+            
+            ; Add to PATH
+            EnVar::AddValue "PATH" $INSTDIR
+          SectionEnd
+          
+          Section "Uninstall"
+            Delete $INSTDIR\jumake.exe
+            RMDir $INSTDIR
+            EnVar::DeleteValue "PATH" $INSTDIR
+          SectionEnd
+          "@
+          
+          $nsisScript | Out-File -Encoding ASCII installer.nsi
+          
+          # Download and run NSIS
+          Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.09/nsis-3.09.zip" -OutFile nsis.zip
+          Expand-Archive nsis.zip -DestinationPath nsis
+          .\nsis\nsis-3.09\makensis.exe installer.nsi
+
+      # === MACOS: tar.gz + dmg ===
       - name: Build tar.gz (macOS)
         if: runner.os == 'macOS'
         run: |
           cd target/${{ matrix.target }}/release
           strip ${{ matrix.binary }} 2>/dev/null || true
           tar -czvf ../../../${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
+
+      - name: Build macOS DMG
+        if: runner.os == 'macOS'
+        run: |
+          brew install create-dmg
+          
+          # Create a simple app bundle
+          mkdir -p JuMake.app/Contents/MacOS
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} JuMake.app/Contents/MacOS/
+          
+          # Create Info.plist
+          cat > JuMake.app/Contents/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>jumake</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.jumake.cli</string>
+              <key>CFBundleName</key>
+              <string>JuMake</string>
+              <key>CFBundleVersion</key>
+              <string>0.1.4</string>
+          </dict>
+          </plist>
+          EOF
+          
+          # Create DMG
+          create-dmg \
+            --volname "JuMake" \
+            --volicon "Applications" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --app-drop-link 450 120 \
+            ${{ matrix.artifact }}.dmg \
+            JuMake.app || true
+          
+          # Fallback: simple zip of app bundle
+          if [ ! -f ${{ matrix.artifact }}.dmg ]; then
+            zip -r ${{ matrix.artifact }}-app.zip JuMake.app
+          fi
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -93,6 +173,8 @@ jobs:
             *.tar.gz
             *.zip
             *.deb
+            *.exe
+            *.dmg
           if-no-files-found: error
 
   release:
