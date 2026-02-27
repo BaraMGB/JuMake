@@ -1,6 +1,6 @@
 [package]
 name = "jumake"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Steffen Baranowsky <BaraMGB@arcor.de>"]
 edition = "2021"
 description = "JuMake is a command-line tool designed to simplify and accelerate the process of setting up new JUCE projects using CMake."
@@ -49,7 +49,7 @@ eula = false
 name = "JuMake"
 identifier = "com.jumake.cli"
 icon = []
-version = "0.1.2"
+version = "0.1.3"
 copyright = "Copyright (c) 2024 Steffen Baranowsky"
 category = "Developer Tool"
 short_description = "JUCE project generator"
