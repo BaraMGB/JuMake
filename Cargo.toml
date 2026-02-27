@@ -32,6 +32,7 @@ priority = "optional"
 assets = [
     ["target/release/jumake", "usr/bin/", "755"],
     ["README.md", "usr/share/doc/jumake/", "644"],
+    ["LICENSE", "usr/share/doc/jumake/", "644"],
 ]
 
 [package.metadata.generate-rpm]
