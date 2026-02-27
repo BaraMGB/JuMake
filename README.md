@@ -20,7 +20,7 @@ JuMake is a command-line tool designed to simplify and accelerate the process of
 **One-line install (PowerShell):**
 
 ```powershell
-iwr https://baragmb.github.io/JuMake/install.ps1 -useb | iex
+iwr https://raw.githubusercontent.com/BaraMGB/JuMake/main/install.ps1 -useb | iex
 ```
 
 This will download JuMake, install it to `%LOCALAPPDATA%\JuMake`, and add it to your PATH.
