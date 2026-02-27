@@ -19,8 +19,11 @@ juce_add_plugin(${PROJECT_NAME}
 
 target_sources(${PROJECT_NAME}
     PRIVATE
+        # JUMAKE_SOURCES_BEGIN
         PluginEditor.cpp
-        PluginProcessor.cpp)
+        PluginProcessor.cpp
+        # JUMAKE_SOURCES_END
+)
 
 
 target_compile_definitions(${PROJECT_NAME}

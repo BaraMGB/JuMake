@@ -10,7 +10,7 @@ JuMake is a command-line tool designed to simplify and accelerate the process of
 * **CMake Integration:** Automatically generate a `CMakeLists.txt` file tailored for audio development.
 * **Source File Templates:** Set up initial C++ files, including `Main.cpp`, `MainComponent.cpp`, and `MainComponent.h`.
 * **Git Integration:** Initialize a Git repository for version control and add the JUCE submodule.
-* **JUCE Submodule:** Automatically clones the JUCE framework as a submodule and integrates it into the project.
+* **JUCE Submodule:** Automatically clones the JUCE framework as a submodule (shallow clone, depth 1) and integrates it into the project.
 * **Cross-Platform Compatibility:** Designed to work on Windows, macOS, and Linux.
 
 ## Installation
@@ -84,8 +84,10 @@ This command will:
 * Generate a basic `CMakeLists.txt` file.
 * Create a `src` directory with template C++ files.
 * Initialize a Git repository.
-* Clone the JUCE framework as a submodule.
+* Clone the JUCE framework as a submodule using a shallow clone (`depth=1`) to keep setup fast.
 * Add the JUCE submodule to the `CMakeLists.txt`.
+
+Note: JuMake checks out the repository's default branch via `origin/HEAD` (for example `main` or `master`) instead of hard-coding a branch name.
 
 ### Build the Project
 

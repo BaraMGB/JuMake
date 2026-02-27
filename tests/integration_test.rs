@@ -50,13 +50,13 @@
 
 // tests/integration_test.rs
 
-use std::fs;
-use std::path::PathBuf;
 use jumake::{
-    create_files::{create_cmakelists, create_source_files},
     context::Context,
+    create_files::{create_cmakelists, create_source_files},
 };
 use lazy_static::lazy_static;
+use std::fs;
+use std::path::PathBuf;
 
 // Test data structure
 struct TestData {
@@ -70,12 +70,14 @@ lazy_static! {
     static ref TEST_DATA: [TestData; 3] = [
         TestData {
             template_name: "GuiApplication",
-            expected_cmake_content: "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
+            expected_cmake_content:
+                "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
             expected_source_files: vec!["Main.cpp", "MainComponent.cpp", "MainComponent.h"],
         },
         TestData {
             template_name: "AudioPlugin",
-            expected_cmake_content: "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
+            expected_cmake_content:
+                "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
             expected_source_files: vec![
                 "PluginProcessor.cpp",
                 "PluginProcessor.h",
@@ -85,7 +87,8 @@ lazy_static! {
         },
         TestData {
             template_name: "ConsoleApp",
-            expected_cmake_content: "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
+            expected_cmake_content:
+                "cmake_minimum_required(VERSION 3.24)\nproject(test_project VERSION 0.0.1)\n",
             expected_source_files: vec!["Main.cpp"],
         },
     ];
@@ -101,8 +104,7 @@ fn test_create_cmakelists() {
             build_type: String::from("Release"),
         };
         let _ = fs::remove_dir_all(&context.project_path); // Clean up before running the test
-        fs::create_dir_all(&context.project_path)
-            .expect("Failed to create test project directory");
+        fs::create_dir_all(&context.project_path).expect("Failed to create test project directory");
         create_cmakelists(&context).expect("Failed to create CMakeLists.txt");
 
         let cmakelists_path = context.project_path.join("CMakeLists.txt");
@@ -130,8 +132,7 @@ fn test_create_source_files() {
             build_type: String::from("Release"),
         };
         let _ = fs::remove_dir_all(&context.project_path); // Clean up before running the test
-        fs::create_dir_all(&context.project_path)
-            .expect("Failed to create test project directory");
+        fs::create_dir_all(&context.project_path).expect("Failed to create test project directory");
         create_source_files(&context).expect("Failed to create source files");
 
         let src_path = context.project_path.join("src");

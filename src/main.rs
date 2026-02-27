@@ -1,10 +1,10 @@
 // scr/main.rs
 
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
-use dialoguer::{Select, theme::ColorfulTheme};
+use clap::{Parser, Subcommand, ValueEnum};
+use dialoguer::{theme::ColorfulTheme, Select};
 use regex::Regex;
 use std::fs;
+use std::path::PathBuf;
 mod build;
 mod context;
 use build::{build_project, run_project};
@@ -14,10 +14,43 @@ use create_project::create_project;
 mod create_files;
 mod initialize_git;
 use create_files::add_class;
-use std::fs::File;
-use std::path::Path;
 use std::error::Error;
+use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::path::Path;
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Template {
+    GuiApplication,
+    AudioPlugin,
+    ConsoleApp,
+}
+
+impl Template {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::GuiApplication => "GuiApplication",
+            Self::AudioPlugin => "AudioPlugin",
+            Self::ConsoleApp => "ConsoleApp",
+        }
+    }
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum ElementType {
+    Class,
+    Component,
+}
+
+impl ElementType {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Class => "class",
+            Self::Component => "component",
+        }
+    }
+}
+
 // CLI argument parsing using clap
 #[derive(Parser)]
 #[command(author, version, about = "A CLI tool for creating and managing JUCE projects.", long_about = None)]
@@ -28,23 +61,27 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-      /// Create a new JUCE project.
+    /// Create a new JUCE project.
     New {
-    /// The name of the project.
-    #[arg(name = "project_name")]
-    project_name: String,
-    /// The path to create the project at (optional).
-    #[arg(short, long, name = "path")]
-    path: Option<String>,
-    /// The template to use (optional).
-    #[arg(short, long, name = "template")]
-    template: Option<String>,
+        /// The name of the project.
+        #[arg(name = "project_name")]
+        project_name: String,
+        /// The path to create the project at (optional).
+        #[arg(short, long, name = "path")]
+        path: Option<String>,
+        /// The template to use (optional).
+        #[arg(short, long, value_enum, name = "template")]
+        template: Option<Template>,
     },
     /// Add a new c++ class or a JUCE component to the project.
     Add {
         /// The type of element to add (simple c++ class or JUCE component).
-        #[arg(value_enum, name = "class type", help = "Specify the type of class to add, 'component' or 'class'.")]
-        element_type: String,
+        #[arg(
+            value_enum,
+            name = "class type",
+            help = "Specify the type of class to add, 'component' or 'class'."
+        )]
+        element_type: ElementType,
         /// The name of the class or component.
         #[arg(name = "name", help = "Specify the name of the class to add. ")]
         element_name: String,
@@ -65,25 +102,34 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::New { project_name, path, template } => {
+        Commands::New {
+            project_name,
+            path,
+            template,
+        } => {
             let project_path = match path {
                 Some(p) => PathBuf::from(p).join(&project_name),
                 None => PathBuf::from(&project_name),
             };
             // Determine template name
             let template_name = match template {
-            Some(t) => Some(t), // Wrap the String in Some()
-            None => {
-                // Display menu and get user selection
-                let selections = ["GuiApplication", "AudioPlugin", "ConsoleApp"];
-                let selection = Select::with_theme(&ColorfulTheme::default())
-                    .with_prompt("Select a template:")
-                    .default(0)
-                    .items(&selections[..])
-                    .interact()
-                    .expect("Failed to get template selection");
+                Some(t) => Some(t.as_str().to_string()),
+                None => {
+                    // Display menu and get user selection
+                    let selections = [
+                        Template::GuiApplication,
+                        Template::AudioPlugin,
+                        Template::ConsoleApp,
+                    ];
+                    let labels = ["GuiApplication", "AudioPlugin", "ConsoleApp"];
+                    let selection = Select::with_theme(&ColorfulTheme::default())
+                        .with_prompt("Select a template:")
+                        .default(0)
+                        .items(&labels[..])
+                        .interact()
+                        .expect("Failed to get template selection");
 
-                Some(selections[selection].to_string()) // Wrap the result in Some()
+                    Some(selections[selection].as_str().to_string())
                 }
             };
 
@@ -94,8 +140,10 @@ fn main() {
                 build_type: String::from("Release"),
             };
 
-            create_project(&context);
-        },
+            if let Err(e) = create_project(&context) {
+                eprintln!("Failed to create project: {}", e);
+            }
+        }
         Commands::Build { build_type } => {
             if let Err(error_message) = validate_build_type(&build_type) {
                 eprintln!("{}", error_message);
@@ -103,7 +151,11 @@ fn main() {
             }
             let project_path = std::env::current_dir().expect("Failed to get current directory");
             let context = Context {
-                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_name: project_path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
                 project_path: project_path.clone(),
                 template_name: determine_template_name(&project_path),
                 build_type: build_type.clone(),
@@ -111,12 +163,10 @@ fn main() {
 
             if let Err(e) = build_project(&context) {
                 eprintln!("Build failed: {}", e);
-            } else {
-                if let Err(e) = save_build_type(&context) {
-                    eprintln!("Failed to save last build type {}", e);
-                }
+            } else if let Err(e) = save_build_type(&context) {
+                eprintln!("Failed to save last build type {}", e);
             }
-        },
+        }
         Commands::Run { build_type } => {
             let project_path = std::env::current_dir().expect("Failed to get current directory");
             let effective_build_type = if build_type == "LastUsed" {
@@ -144,33 +194,41 @@ fn main() {
             if let Err(e) = run_project(&context) {
                 eprintln!("Failed to run: {}", e);
             }
-        },
-        Commands::Add { element_type, element_name } => {
+        }
+        Commands::Add {
+            element_type,
+            element_name,
+        } => {
             let project_path = std::env::current_dir().expect("Failed to get current directory");
             let context = Context {
-                project_name: project_path.file_name().unwrap().to_string_lossy().to_string(),
+                project_name: project_path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
                 project_path,
                 template_name: None, // We don't need the template name for this command
                 build_type: String::from("Release"), // Default build type
             };
 
-            if let Err(e) = add_class(&context, &element_type, &element_name) {
-                eprintln!("Failed to add {}: {}", element_type, e);
+            if let Err(e) = add_class(&context, element_type.as_str(), &element_name) {
+                eprintln!("Failed to add {}: {}", element_type.as_str(), e);
             }
-        },
-        // Add other command implementations here later
+        } // Add other command implementations here later
     }
 }
 
 fn validate_build_type(build_type: &str) -> Result<(), String> {
     match build_type {
         "Debug" | "Release" | "RelWithDebInfo" | "MinSizeRel" => Ok(()),
-        _ => Err(format!("Invalid build type: {}. Use one of: Debug, Release, RelWithDebInfo, MinSizeRel", build_type)),
+        _ => Err(format!(
+            "Invalid build type: {}. Use one of: Debug, Release, RelWithDebInfo, MinSizeRel",
+            build_type
+        )),
     }
 }
 
-
-fn determine_template_name(project_path: &PathBuf) -> Option<String> {
+fn determine_template_name(project_path: &Path) -> Option<String> {
     let cmakelists_path = project_path.join("src").join("CMakeLists.txt");
 
     if cmakelists_path.exists() {
@@ -194,7 +252,7 @@ fn save_build_type(context: &Context) -> std::io::Result<()> {
     fs::write(context.project_path.join(".jumake"), &context.build_type)
 }
 
-fn read_last_build_type(project_path: &PathBuf) -> Option<String> {
+fn read_last_build_type(project_path: &Path) -> Option<String> {
     fs::read_to_string(project_path.join(".jumake")).ok()
 }
 

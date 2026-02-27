@@ -9,44 +9,37 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::Path;
 // Initialize the Git repository
-pub fn initialize_git_repo(context: &Context) {
+pub fn initialize_git_repo(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
     println!("Initializing Git repository...");
-    match Repository::init(&context.project_path) {
-        Ok(repo) => {
-            println!("Git repository initialized successfully.");
+    let repo = Repository::init(&context.project_path)?;
+    println!("Git repository initialized successfully.");
 
-            let mut gitignore_file = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(context.project_path.join(".gitignore"))
-                .expect("Failed to open .gitignore file");
+    let mut gitignore_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .open(context.project_path.join(".gitignore"))?;
 
-            writeln!(gitignore_file, "modules/").expect("Failed to write to .gitignore");
-            writeln!(gitignore_file, "jumake_build/").expect("Failed to write to .gitignore");
-            writeln!(gitignore_file, "build/").expect("Failed to write to .gitignore");
-            writeln!(gitignore_file, "compile_commands.json").expect("Failed to write to .gitignore");
-            writeln!(gitignore_file, ".jumake").expect("Failed to write to .gitignore");
-            // Add all files to the repository (excluding the submodule)
-            if let Err(e) = add_all_files_to_repo(&repo) {
-                eprintln!("Error adding files to Git index: {}", e);
-                return;
-            }
+    writeln!(gitignore_file, "modules/")?;
+    writeln!(gitignore_file, "jumake_build/")?;
+    writeln!(gitignore_file, "build/")?;
+    writeln!(gitignore_file, "compile_commands.json")?;
+    writeln!(gitignore_file, ".jumake")?;
 
-            // Add JUCE as a submodule
-            if let Err(e) = add_juce_submodule(context) {
-                eprintln!("Error adding JUCE submodule: {}", e);
-                return;
-            }
+    // Add all files to the repository (excluding the submodule)
+    add_all_files_to_repo(&repo)?;
 
-            // Stage the .gitmodules file
-            let mut index = repo.index().expect("Failed to get Git index");
-            index
-                .add_path(Path::new(".gitmodules"))
-                .expect("Failed to add .gitmodules to index");
-            index.write().expect("Failed to write Git index");
-        }
-        Err(e) => eprintln!("Failed to initialize Git repository: {}", e),
+    // Add JUCE as a submodule
+    add_juce_submodule(context)?;
+
+    // Stage the .gitmodules file if present
+    let gitmodules_path = context.project_path.join(".gitmodules");
+    if gitmodules_path.exists() {
+        let mut index = repo.index()?;
+        index.add_path(Path::new(".gitmodules"))?;
+        index.write()?;
     }
+
+    Ok(())
 }
 fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error>> {
     let modules_path = context.project_path.join("modules");
@@ -72,7 +65,7 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
                     stats.total_objects(),
                     stats.received_bytes()
                 );
-                std::io::stdout().flush().unwrap();
+                let _ = std::io::stdout().flush();
             }
             true
         });
@@ -116,17 +109,24 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
 
         let mut fetch_options = FetchOptions::new();
         fetch_options.remote_callbacks(remote_callbacks);
+        fetch_options.depth(1);
 
         let mut builder = git2::build::RepoBuilder::new();
         builder.fetch_options(fetch_options);
 
         let submodule_repo = builder.clone(submodule_url, &juce_path)?;
-        println!("\nFetched all branches");
+        println!("\nFetched JUCE using shallow clone (depth 1)");
 
-        // Checkout the master branch explicitly
-        let (object, reference) = submodule_repo.revparse_ext("refs/remotes/origin/master")?;
+        // Checkout the remote default HEAD branch.
+        let (object, reference) = submodule_repo.revparse_ext("refs/remotes/origin/HEAD")?;
         submodule_repo.checkout_tree(&object, Some(CheckoutBuilder::default().force()))?;
-        submodule_repo.set_head(reference.unwrap().name().unwrap())?;
+        let Some(reference) = reference else {
+            return Err("Failed to resolve default remote HEAD reference".into());
+        };
+        let Some(reference_name) = reference.name() else {
+            return Err("Failed to read default branch name".into());
+        };
+        submodule_repo.set_head(reference_name)?;
 
         // Now add it to parent repo as a submodule by creating .gitmodules
         let gitmodules_path = context.project_path.join(".gitmodules");
