@@ -58,15 +58,8 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
     if !juce_path.exists() {
         println!("Cloning JUCE from GitHub... this may take some minutes. Please be patient!");
 
-        let repo = Repository::open(&context.project_path)?;
-
-        // Set checkout to false to prevent automatic checkout of main branch
-        let mut submodule = repo.submodule(submodule_url, Path::new("modules/JUCE"), false)?;
-        submodule.init(true)?;
-
-        let submodule_repo = submodule.open()?;
-
-        // Set up remote callbacks for verbose output
+        // Clone JUCE directly using git2::build::RepoBuilder
+        // This bypasses the submodule mechanism and git's URL rewriting
         let mut remote_callbacks = RemoteCallbacks::new();
         let mut last_progress = 0;
 
@@ -84,22 +77,64 @@ fn add_juce_submodule(context: &Context) -> Result<(), Box<dyn std::error::Error
             true
         });
 
-        // Fetch all branches with verbose output
+        remote_callbacks.credentials(|_url, username_from_url, allowed_types| {
+            let username = username_from_url.unwrap_or("git");
+
+            // For SSH (if git config rewrites HTTPS to SSH)
+            if allowed_types.contains(git2::CredentialType::SSH_KEY) {
+                // Try SSH agent first
+                if let Ok(cred) = git2::Cred::ssh_key_from_agent(username) {
+                    return Ok(cred);
+                }
+
+                // Try default SSH key locations
+                if let Some(home) = std::env::var_os("HOME") {
+                    let home_path = std::path::Path::new(&home);
+                    let key_paths = [
+                        home_path.join(".ssh").join("id_ed25519"),
+                        home_path.join(".ssh").join("id_rsa"),
+                        home_path.join(".ssh").join("id_ecdsa"),
+                    ];
+
+                    for key_path in &key_paths {
+                        if key_path.exists() {
+                            if let Ok(cred) = git2::Cred::ssh_key(username, None, key_path, None) {
+                                return Ok(cred);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // For HTTPS
+            if allowed_types.contains(git2::CredentialType::DEFAULT) {
+                return git2::Cred::default();
+            }
+
+            git2::Cred::default()
+        });
+
         let mut fetch_options = FetchOptions::new();
         fetch_options.remote_callbacks(remote_callbacks);
-        fetch_options.download_tags(git2::AutotagOption::All);
 
-        submodule_repo.find_remote("origin")?.fetch(
-            &["+refs/heads/*:refs/remotes/origin/*"],
-            Some(&mut fetch_options),
-            None,
-        )?;
+        let mut builder = git2::build::RepoBuilder::new();
+        builder.fetch_options(fetch_options);
+
+        let submodule_repo = builder.clone(submodule_url, &juce_path)?;
         println!("\nFetched all branches");
 
         // Checkout the master branch explicitly
         let (object, reference) = submodule_repo.revparse_ext("refs/remotes/origin/master")?;
         submodule_repo.checkout_tree(&object, Some(CheckoutBuilder::default().force()))?;
         submodule_repo.set_head(reference.unwrap().name().unwrap())?;
+
+        // Now add it to parent repo as a submodule by creating .gitmodules
+        let gitmodules_path = context.project_path.join(".gitmodules");
+        let gitmodules_content = format!(
+            "[submodule \"modules/JUCE\"]\n\tpath = modules/JUCE\n\turl = {}\n",
+            submodule_url
+        );
+        fs::write(gitmodules_path, gitmodules_content)?;
 
         println!("JUCE cloned successfully");
     } else {
