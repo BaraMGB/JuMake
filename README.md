@@ -15,9 +15,43 @@ JuMake is a command-line tool designed to simplify and accelerate the process of
 
 ## Installation
 
-1. **Install Rust:** If you don't have Rust installed, download and install it from [https://www.rust-lang.org/tools/install](https://www.rust-lang.org/tools/install).
-2. **Install JuMake:**
-```bashV
+### Download Pre-built Binaries
+
+Download the latest release for your platform from [GitHub Releases](https://github.com/BaraMGB/JuMake/releases).
+
+#### Linux (Debian/Ubuntu)
+
+```bash
+# Download .deb package
+wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.deb
+sudo dpkg -i jumake-linux-x64.deb
+
+# Or download binary
+wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.tar.gz
+tar -xzf jumake-linux-x64.tar.gz
+sudo mv jumake /usr/local/bin/
+```
+
+#### Windows
+
+Download `jumake-windows-x64-installer.exe` from [Releases](https://github.com/BaraMGB/JuMake/releases) and run the installer.
+
+Or download `jumake-windows-x64.zip`, extract it, and add `jumake.exe` to your PATH.
+
+#### macOS
+
+Download `jumake-macos-arm64.dmg` from [Releases](https://github.com/BaraMGB/JuMake/releases), open it, and copy `jumake` to `/usr/local/bin/` or your preferred location.
+
+```bash
+# Or via terminal
+wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-macos-arm64.tar.gz
+tar -xzf jumake-macos-arm64.tar.gz
+sudo mv jumake /usr/local/bin/
+```
+
+### Install from Source (cargo)
+
+```bash
 cargo install jumake
 ```
 
