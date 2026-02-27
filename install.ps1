@@ -3,13 +3,11 @@
 # iwr https://raw.githubusercontent.com/BaraMGB/JuMake/main/install.ps1 -useb | iex
 
 $ErrorActionPreference = "Stop"
-$Version = "0.1.5"
 $InstallDir = "$env:LOCALAPPDATA\JuMake"
-$BinaryUrl = "https://github.com/BaraMGB/JuMake/releases/download/v$Version/jumake-windows-x64.zip"
+$BinaryUrl = "https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-windows-x64.zip"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  JuMake Installer for Windows" -ForegroundColor Cyan
-Write-Host "  Version: $Version" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -28,7 +26,8 @@ $ZipFile = "$InstallDir\jumake.zip"
 try {
     Invoke-WebRequest -Uri $BinaryUrl -OutFile $ZipFile -UseBasicParsing
 } catch {
-    Write-Host "ERROR: Download failed. Please check your internet connection." -ForegroundColor Red
+    Write-Host "ERROR: Download failed." -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
     exit 1
 }
 
@@ -45,17 +44,19 @@ if ($UserPath -notlike "*$InstallDir*") {
     Write-Host "Added JuMake to your PATH." -ForegroundColor Green
 }
 
+# Get version from binary
+$Version = & "$InstallDir\jumake.exe" --version 2>&1 | Select-Object -First 1
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "  Installation complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "JuMake is now installed at: $InstallDir\jumake.exe" -ForegroundColor Cyan
+Write-Host "Installed: $Version" -ForegroundColor Cyan
+Write-Host "Location:  $InstallDir\jumake.exe" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "IMPORTANT: Restart your terminal or run:" -ForegroundColor Yellow
-Write-Host "  refreshenv" -ForegroundColor Yellow
+Write-Host "IMPORTANT: Restart your terminal or open a new" -ForegroundColor Yellow
+Write-Host "PowerShell/CMD window, then run:" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "Or open a new PowerShell/CMD window." -ForegroundColor Yellow
-Write-Host ""
-Write-Host "Then try: jumake --version" -ForegroundColor Cyan
+Write-Host "  jumake --version" -ForegroundColor Cyan
 Write-Host ""
