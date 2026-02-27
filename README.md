@@ -15,37 +15,47 @@ JuMake is a command-line tool designed to simplify and accelerate the process of
 
 ## Installation
 
-### Download Pre-built Binaries
+### Windows
 
-Download the latest release for your platform from [GitHub Releases](https://github.com/BaraMGB/JuMake/releases).
+**One-line install (PowerShell):**
 
-#### Linux (Debian/Ubuntu)
+```powershell
+iwr https://baragmb.github.io/JuMake/install.ps1 -useb | iex
+```
+
+This will download JuMake, install it to `%LOCALAPPDATA%\JuMake`, and add it to your PATH.
+
+After installation, **restart your terminal** and run:
+
+```powershell
+jumake --version
+```
+
+### macOS (Homebrew)
 
 ```bash
-# Download .deb package
+brew tap BaraMGB/tap
+brew install jumake
+```
+
+Or download manually:
+
+```bash
+wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-macos-arm64.tar.gz
+tar -xzf jumake-macos-arm64.tar.gz
+sudo mv jumake /usr/local/bin/
+```
+
+### Linux (Debian/Ubuntu)
+
+```bash
+# Download .deb package (recommended)
 wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.deb
 sudo dpkg -i jumake-linux-x64.deb
 
 # Or download binary
 wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.tar.gz
 tar -xzf jumake-linux-x64.tar.gz
-sudo mv jumake /usr/local/bin/
-```
-
-#### Windows
-
-Download `jumake-windows-x64-installer.exe` from [Releases](https://github.com/BaraMGB/JuMake/releases) and run the installer.
-
-Or download `jumake-windows-x64.zip`, extract it, and add `jumake.exe` to your PATH.
-
-#### macOS
-
-Download `jumake-macos-arm64.dmg` from [Releases](https://github.com/BaraMGB/JuMake/releases), open it, and copy `jumake` to `/usr/local/bin/` or your preferred location.
-
-```bash
-# Or via terminal
-wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-macos-arm64.tar.gz
-tar -xzf jumake-macos-arm64.tar.gz
 sudo mv jumake /usr/local/bin/
 ```
 
@@ -64,7 +74,7 @@ jumake new <project_name>
 ```
 
 This command will:
-* Ask you, what kind of project do you want to create: GUI Application, Audio Plugin or Console App?
+* Ask you what kind of project you want to create: GUI Application, Audio Plugin, or Console App?
 * Create a new directory with the specified `project_name`.
 * Generate a basic `CMakeLists.txt` file.
 * Create a `src` directory with template C++ files.
@@ -93,12 +103,13 @@ This command will:
 * Build the project (if it hasn't been built already).
 * Run the executable or open the application bundle, depending on the platform and project type.
 
-### Add new Class to your project
+### Add New Class to Your Project
 
 ```bash
 jumake add <class_type> <class_name>
 ```
-<class_type> can be `class` or `component`. Where `class` will be a simple c++-class and `component` will be a JuceComponent.
+
+`<class_type>` can be `class` or `component`. Where `class` will be a simple C++ class and `component` will be a JUCE Component.
 
 This command will:
 * Add new `<class_name>.cpp` and `<class_name>.h` files in the src directory
@@ -129,4 +140,6 @@ jumake run
 
 Contributions are welcome! Please see the `CONTRIBUTING.md` file for guidelines.
 
-This project is licensed under the MIT License - see the `LICENSE.md` file for details.
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
