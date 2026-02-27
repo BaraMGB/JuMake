@@ -19,12 +19,15 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact: jumake-linux-x64
+            binary: jumake
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: jumake-windows-x64
+            binary: jumake.exe
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact: jumake-macos-arm64
+            binary: jumake
 
     runs-on: ${{ matrix.os }}
 
@@ -46,60 +49,49 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      # === LINUX ===
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+
+      # === LINUX: tar.gz + optional deb ===
+      - name: Package tar.gz (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
+
       - name: Install cargo-deb (Linux)
         if: runner.os == 'Linux'
         run: cargo install cargo-deb
+        continue-on-error: true
 
-      - name: Install cargo-appimage (Linux)
+      - name: Package .deb (Linux)
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get install -y libgtk-3-dev
-          cargo install cargo-appimage
+        run: cargo deb --no-build --output ${{ matrix.artifact }}.deb || echo "deb build skipped"
+        continue-on-error: true
 
-      - name: Build .deb (Linux)
-        if: runner.os == 'Linux'
-        run: cargo deb --output ${{ matrix.artifact }}.deb
-
-      - name: Build .AppImage (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          cargo appimage --target ${{ matrix.target }}
-          mv target/${{ matrix.target }}/generate-appimage/*.AppImage ${{ matrix.artifact }}.AppImage || true
-          mv target/${{ matrix.target }}/*.AppImage ${{ matrix.artifact }}.AppImage || true
-
-      # === WINDOWS ===
-      - name: Install cargo-wix (Windows)
+      # === WINDOWS: zip ===
+      - name: Package zip (Windows)
         if: runner.os == 'Windows'
-        run: cargo install cargo-wix
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a ${{ matrix.artifact }}.zip ${{ matrix.binary }}
 
-      - name: Build .msi (Windows)
-        if: runner.os == 'Windows'
-        run: cargo wix --output ${{ matrix.artifact }}.msi
-
-      # === MACOS ===
-      - name: Install create-dmg (macOS)
-        if: runner.os == 'macOS'
-        run: cargo install create-dmg-cargo
-
-      - name: Build .dmg (macOS)
+      # === MACOS: tar.gz ===
+      - name: Package tar.gz (macOS)
         if: runner.os == 'macOS'
         run: |
-          cargo build --release --target ${{ matrix.target }}
-          create-dmg-cargo --target ${{ matrix.target }} --output ${{ matrix.artifact }}.dmg || cargo install cargo-bundle && cargo bundle --release --target ${{ matrix.target }} && zip -r ${{ matrix.artifact }}-app.zip target/${{ matrix.target }}/release/bundle/osx/
+          cd target/${{ matrix.target }}/release
+          tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
 
-      # === UPLOAD ===
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
+            target/${{ matrix.target }}/release/*.tar.gz
+            target/${{ matrix.target }}/release/*.zip
             *.deb
-            *.AppImage
-            *.msi
-            *.dmg
-            *-app.zip
-          if-no-files-found: ignore
+          if-no-files-found: error
 
   release:
     needs: build
