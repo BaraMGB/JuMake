@@ -60,7 +60,7 @@ jobs:
       - name: Build .deb package (Linux)
         if: runner.os == 'Linux'
         run: |
-          cargo deb --no-strip --output target/${{ matrix.target }}/release/${{ matrix.artifact }}.deb
+          cargo deb --no-strip --output ${{ matrix.artifact }}.deb
         continue-on-error: true
 
       - name: Build tar.gz (Linux)
@@ -68,72 +68,31 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           strip ${{ matrix.binary }} 2>/dev/null || true
-          tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
+          tar -czvf ../../../${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
 
       # === WINDOWS PACKAGES ===
-      - name: Install NSIS (Windows)
-        if: runner.os == 'Windows'
-        run: choco install nsis -y
-
-      - name: Create Windows installer (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $nsisContent = @"
-          !include "MUI2.nsh"
-          Name "JuMake"
-          OutFile "jumake-windows-x64-installer.exe"
-          InstallDir "$PROGRAMFILES64\JuMake"
-          RequestExecutionLevel admin
-          !insertmacro MUI_PAGE_DIRECTORY
-          !insertmacro MUI_PAGE_INSTFILES
-          !insertmacro MUI_LANGUAGE "English"
-          Section "Install"
-            SetOutPath $INSTDIR
-            File "target\x86_64-pc-windows-msvc\release\jumake.exe"
-            EnVar::AddValue "PATH" $INSTDIR
-          SectionEnd
-          "@
-          $nsisContent | Out-File -Encoding ASCII installer.nsi
-          makensis installer.nsi
-        continue-on-error: true
-
       - name: Build zip (Windows)
         if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ${{ matrix.artifact }}.zip ${{ matrix.binary }}
+          7z a ../../../${{ matrix.artifact }}.zip ${{ matrix.binary }}
 
       # === MACOS PACKAGES ===
-      - name: Install create-dmg (macOS)
-        if: runner.os == 'macOS'
-        run: brew install create-dmg
-
-      - name: Build .dmg (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          mkdir -p dmg_temp
-          cp target/${{ matrix.target }}/release/${{ matrix.binary }} dmg_temp/
-          create-dmg --volname "JuMake" --volicon "Applications" ${{ matrix.artifact }}.dmg dmg_temp/ || true
-        continue-on-error: true
-
       - name: Build tar.gz (macOS)
         if: runner.os == 'macOS'
         run: |
           cd target/${{ matrix.target }}/release
           strip ${{ matrix.binary }} 2>/dev/null || true
-          tar -czvf ${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
+          tar -czvf ../../../${{ matrix.artifact }}.tar.gz ${{ matrix.binary }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: |
-            target/${{ matrix.target }}/release/*.tar.gz
-            target/${{ matrix.target }}/release/*.zip
-            target/${{ matrix.target }}/release/*.deb
-            target/${{ matrix.target }}/release/*.dmg
-            *.exe
+            *.tar.gz
+            *.zip
+            *.deb
           if-no-files-found: error
 
   release:
