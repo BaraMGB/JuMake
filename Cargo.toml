@@ -1,14 +1,15 @@
 [package]
 name = "jumake"
 version = "0.1.2"
-authors = ["Steffen Baranowsky BaraMGB@arcor.de"]
+authors = ["Steffen Baranowsky <BaraMGB@arcor.de>"]
 edition = "2021"
 description = "JuMake is a command-line tool designed to simplify and accelerate the process of setting up new JUCE projects using CMake."
 license = "MIT"
 documentation = "https://github.com/BaraMGB/JuMake"
 homepage = "https://github.com/BaraMGB/JuMake"
 repository = "https://github.com/BaraMGB/JuMake"
-
+keywords = ["juce", "cmake", "audio", "dsp", "cli"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 clap = { version = "4.5.9", features = ["derive"] }
@@ -17,3 +18,39 @@ git2 = "0.19"
 dialoguer = "0.11"
 regex = "1.10.5"
 lazy_static = "1.5.0"
+
+# === PACKAGE METADATA ===
+
+[package.metadata.deb]
+maintainer = "Steffen Baranowsky <BaraMGB@arcor.de>"
+copyright = "2024, Steffen Baranowsky <BaraMGB@arcor.de>"
+license-file = ["LICENSE", "4"]
+extended-description = "Command-line tool for setting up JUCE projects with CMake"
+depends = "$auto"
+section = "utility"
+priority = "optional"
+assets = [
+    ["target/release/jumake", "usr/bin/", "755"],
+    ["README.md", "usr/share/doc/jumake/", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+    { source = "target/release/jumake", dest = "/usr/bin/jumake", mode = "755" },
+]
+
+[package.metadata.wix]
+upgrade-guid = "E9D1A8B0-1C9F-4A8E-8B3D-5E6F7A8B9C0D"
+path-guid = "A1B2C3D4-E5F6-7890-ABCD-EF1234567890"
+license = false
+eula = false
+
+[package.metadata.bundle]
+name = "JuMake"
+identifier = "com.jumake.cli"
+icon = []
+version = "0.1.2"
+copyright = "Copyright (c) 2024 Steffen Baranowsky"
+category = "Developer Tool"
+short_description = "JUCE project generator"
+long_description = "JuMake is a command-line tool for setting up JUCE projects with CMake"
