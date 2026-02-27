@@ -52,7 +52,12 @@ sudo mv jumake /usr/local/bin/
 # Download .deb package (recommended)
 wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.deb
 sudo dpkg -i jumake-linux-x64.deb
+```
 
+Or download manually:
+
+
+```bash
 # Or download binary
 wget https://github.com/BaraMGB/JuMake/releases/latest/download/jumake-linux-x64.tar.gz
 tar -xzf jumake-linux-x64.tar.gz
