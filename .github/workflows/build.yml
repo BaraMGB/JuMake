@@ -92,6 +92,7 @@ jobs:
             *.zip
             *.deb
           if-no-files-found: error
+          retention-days: 1
 
   release:
     needs: build
